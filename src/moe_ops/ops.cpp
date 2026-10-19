@@ -56,5 +56,6 @@ torch::Tensor topk_experts(const torch::Tensor& scores, int64_t k) {
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
     module.def(
         "topk_experts", &topk_experts, pybind11::arg("scores"), pybind11::arg("k"),
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Stable descending top-k indices for CPU float32 tensors; k must be nonnegative.");
 }
