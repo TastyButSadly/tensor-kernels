@@ -9,7 +9,6 @@
 namespace {
 
 torch::Tensor topk_experts(const torch::Tensor& scores, int64_t k) {
-
     TORCH_CHECK(scores.device().is_cpu(), "topk_experts: expected a CPU tensor");
     TORCH_CHECK(scores.layout() == c10::kStrided,
                 "topk_experts: expected a strided tensor");
@@ -28,8 +27,8 @@ torch::Tensor topk_experts(const torch::Tensor& scores, int64_t k) {
         return indices;
     }
 
-    // A contiguous copy, when needed, makes each last-dimension row consecutive
-    const auto contiguous_scores = scores.contiguous();
+    // Materialize lazy negation before reading raw storage; then flatten rows.
+    const auto contiguous_scores = scores.resolve_neg().contiguous();
     const auto* input = contiguous_scores.data_ptr<float>();
     auto* output = indices.data_ptr<int64_t>();
     const auto num_rows = scores.numel() / num_experts;
@@ -57,5 +56,6 @@ torch::Tensor topk_experts(const torch::Tensor& scores, int64_t k) {
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
     module.def(
         "topk_experts", &topk_experts, pybind11::arg("scores"), pybind11::arg("k"),
+        pybind11::call_guard<pybind11::gil_scoped_release>(),
         "Stable descending top-k indices for CPU float32 tensors; k must be nonnegative.");
 }
